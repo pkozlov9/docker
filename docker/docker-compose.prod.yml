@@ -1,0 +1,29 @@
+version: '3.2'
+
+services:
+
+  server:
+    container_name: company_server_prod
+    build:
+      dockerfile: Dockerfile.prod
+    networks:
+      static-network:
+          ipv4_address: 10.11.0.10
+
+  db:
+    container_name: company_db_prod
+    networks:
+      static-network:
+          ipv4_address: 10.11.0.11
+    environment:
+      TZ: 'Europe/Moscow'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'no'
+      MYSQL_DATABASE: forge
+      MYSQL_USER: forge
+      MYSQL_PASSWORD: 'secret'
+
+networks:
+  static-network:
+    ipam:
+      config:
+        - subnet: 10.11.0.0/16

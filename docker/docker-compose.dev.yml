@@ -1,0 +1,31 @@
+version: '3.2'
+
+services:
+
+  server:
+    container_name: company_server_dev
+    build:
+      dockerfile: Dockerfile.dev
+    networks:
+      static-network:
+          ipv4_address: 10.10.0.10
+    extra_hosts:
+     - 'host.docker.internal:10.10.0.1'
+
+  db:
+    container_name: company_db_dev
+    networks:
+      static-network:
+          ipv4_address: 10.10.0.20
+    environment:
+      TZ: 'Europe/Moscow'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: homestead
+      MYSQL_USER: homestead
+      MYSQL_PASSWORD: 'secret'
+
+networks:
+  static-network:
+    ipam:
+      config:
+        - subnet: 10.10.0.0/16

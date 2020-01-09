@@ -1,0 +1,65 @@
+FROM php:5.6-apache
+
+# Add non-root user for container
+RUN useradd web-server && \
+    mkdir /home/web-server && \
+    chown -R web-server:web-server /home/web-server
+
+# Install libs for Composer
+RUN apt-get update -y --fix-missing
+RUN apt-get install --no-install-recommends -y \
+    wget libjpeg-dev libpng-dev && \
+    docker-php-ext-install gd zip
+
+# Install Composer
+RUN wget -q -O - https://getcomposer.org/installer --show-progress > composer-setup.php
+RUN php composer-setup.php --install-dir=/usr/bin --filename=composer && \
+    rm -rf composer-setup.php
+
+# Install Mysql
+RUN docker-php-ext-install pdo pdo_mysql mysql mysqli
+
+# Install and setup Xdebug
+RUN pecl install xdebug-2.5.5
+COPY config/php/xdebug.ini /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+RUN docker-php-ext-enable xdebug && \
+    touch /var/log/xdebug.log && \
+    chmod 0777 /var/log/xdebug.log
+
+# Install Xhprof
+RUN apt-get install --no-install-recommends -y graphviz
+RUN pecl install xhprof-0.9.4
+COPY config/php/xhprof.ini /usr/local/etc/php/conf.d/docker-php-ext-xhprof.ini
+RUN docker-php-ext-enable xhprof
+
+# Make directory for xhprof logs
+RUN mkdir -p docker/server/xhprof/xhprof_runs && \
+    chmod 0777 docker/server/xhprof/xhprof_runs
+
+# Make directory for php error log
+RUN mkdir -p /var/log/php && \
+    touch /var/log/php/error.log && \
+    chmod -R 0777 /var/log/php
+
+# Configure Apache
+COPY config/php/app.ini /usr/local/etc/php/conf.d/
+COPY config/apache/apache2.conf /etc/apache2/
+RUN rm -rf /etc/apache2/sites-available/* /etc/apache2/sites-enabled/* /var/log/apache2/*
+COPY config/apache/apache.dev.conf /etc/apache2/sites-available/
+RUN cd /etc/apache2/sites-available/ && \
+    a2ensite * && \
+    a2enmod rewrite headers
+
+# Install Additional Tools
+RUN apt-get update -y --fix-missing
+RUN apt-get install --no-install-recommends -y \
+    git vim nano mc htop net-tools iproute2 xauth iputils-ping telnet
+
+# Cleanup to reduce image size
+RUN docker-php-source delete && \
+    rm -rf /var/lib/apt/lists/* /tmp/*
+
+WORKDIR /var/www
+
+# Mounts
+VOLUME [ "/var/www" ]
